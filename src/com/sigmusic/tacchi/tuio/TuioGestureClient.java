@@ -35,6 +35,7 @@ public class TuioGestureClient implements TuioListener {
 
 	@Override
 	public void removeTuioCursor(TuioCursor tcur) {
+		//trim history to previous 5
 		pastCursors.add(tcur);
 		if (pastCursors.size() > MAX_CURSORS+1) {
 			pastCursors.remove(0);
@@ -58,15 +59,17 @@ public class TuioGestureClient implements TuioListener {
 			
 			
 			//find pivot
-			TuioPoint pivot = findLeastActive(pastCursors);
+			TuioCursor pivot = findLeastActive(pastCursors);
 			
 			//iterate over each moving point, calculating arc
 			//compare all arcs together.
 			//test for relative and absolute bounds
 			// as in: all arcs are within 10 degrees, and all over 45 degrees.
-			
-			
-			
+			for (TuioCursor cursor : pastCursors) {
+				if (pivot != cursor ) {
+					//pi
+				}
+			}
 			if (success) {
 				pastCursors.clear();
 			}
