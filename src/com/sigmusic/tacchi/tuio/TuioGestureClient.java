@@ -35,20 +35,41 @@ public class TuioGestureClient implements TuioListener {
 
 	@Override
 	public void removeTuioCursor(TuioCursor tcur) {
-		if (pastCursors.size() > MAX_CURSORS) {
-			pastCursors.remove(0);
-		}
 		pastCursors.add(tcur);
-		
+		if (pastCursors.size() > MAX_CURSORS+1) {
+			pastCursors.remove(0);
+			while (pastCursors.size() > MAX_CURSORS) {
+				pastCursors.remove(0);
+			}
+		}
+
 		/**
 		 * check:
 		 * were the last 5 cursors to be removed from the screen started at the same point?
 		 */
 		
-		if (pastCursors.size() == MAX_CURSORS) {
-			float minstartdistance = minCircle(pastCursors, 0);
-			System.out.println("Min start distance: "+minstartdistance);
-			pastCursors.clear();
+		if (pastCursors.size() >= MAX_CURSORS) {
+			boolean success = false;
+			//check to see if all 5 are within same time-bounds of touch down and touch up
+			//but we're not going to do that now.
+			
+			
+			//check to see if points started within certain min-radius and ended within min-radius
+			
+			
+			//find pivot
+			TuioPoint pivot = findLeastActive(pastCursors);
+			
+			//iterate over each moving point, calculating arc
+			//compare all arcs together.
+			//test for relative and absolute bounds
+			// as in: all arcs are within 10 degrees, and all over 45 degrees.
+			
+			
+			
+			if (success) {
+				pastCursors.clear();
+			}
 		}
 		
 		
@@ -79,6 +100,48 @@ public class TuioGestureClient implements TuioListener {
 		}
 		
 		return maxDistance;
+	}
+	
+	
+	TuioCursor findLeastActive(ArrayList<TuioCursor> cursors) {
+		TuioCursor result = null;
+		float minDistance = 100;
+		for (TuioCursor cursor : cursors ) {
+			float maxHistory = 0;
+			TuioPoint first = cursor.getPath().get(0);
+			for (TuioPoint point : cursor.getPath()) {
+				float distance = first.getDistance(point);
+				if (distance > maxHistory) {
+					maxHistory = distance;
+				}
+			}
+			if (maxHistory < minDistance)  {
+				result = cursor;
+				minDistance = maxHistory;
+			}
+		}
+		return result;
+	}
+	
+	
+	float calcArc(TuioCursor pivot, TuioCursor movingcursor) {
+		TuioPoint pivotPoint = pivot.getPosition();
+		
+		TuioPoint firstPoint = movingcursor.getPath().get(0);
+		TuioPoint lastPoint = movingcursor.getPosition();
+		
+		return calcArc(pivotPoint, firstPoint, lastPoint);
+	}
+	
+	float calcArc(TuioPoint pivot, TuioPoint startpoint, TuioPoint endpoint) {
+		float angle1 = pivot.getAngle(startpoint);
+		float angle2 = pivot.getAngle(endpoint);
+		
+		float result = Math.abs(angle1 - angle2);
+		if (result > 3.1415f) {
+			result = 6.2832f - result;
+		}
+		return result;
 	}
 
 	
