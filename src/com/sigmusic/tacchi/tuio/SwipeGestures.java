@@ -11,6 +11,12 @@ import TUIO.TuioTime;
 
 public class SwipeGestures implements TuioListener {
 	int MAX_CURSORS = 5;
+	float MIN_BLOB_DISTANCE = 0.1f;
+	float MAX_BLOB_DISTANCE = 0.3f;
+	float HORIZ_MIN_X = 0.3f;
+	float HORIZ_MAX_Y = 0.1f;
+	float VERT_MIN_Y = 0.3f;
+	float VERT_MAX_X = 0.1f;
 	
 	ArrayList<TuioCursor> pastCursors = new ArrayList<TuioCursor>();
 	
@@ -35,20 +41,43 @@ public class SwipeGestures implements TuioListener {
 
 	@Override
 	public void removeTuioCursor(TuioCursor tcur) {
-		if (pastCursors.size() > MAX_CURSORS) {
-			pastCursors.remove(0);
-		}
+		//trim history to previous 5
 		pastCursors.add(tcur);
-		
-		/**
-		 * check:
-		 * were the last 5 cursors to be removed from the screen started at the same point?
-		 */
-		
-		if (pastCursors.size() == MAX_CURSORS) {
-			float minstartdistance = minCircle(pastCursors, 0);
-			System.out.println("Min start distance: "+minstartdistance);
-			pastCursors.clear();
+		if (pastCursors.size() > MAX_CURSORS+1) {
+			pastCursors.remove(0);
+			while (pastCursors.size() > MAX_CURSORS) {
+				pastCursors.remove(0);
+			}
+		}
+
+
+		if (pastCursors.size() >= MAX_CURSORS) {
+			boolean success = false;
+			
+			float startBlobSize = minCircle(pastCursors, 0);
+			float endBlobSize = lastMinCircle(pastCursors);
+			
+			if (startBlobSize > MIN_BLOB_DISTANCE && startBlobSize < MAX_BLOB_DISTANCE
+					&& endBlobSize > MIN_BLOB_DISTANCE && endBlobSize < MAX_BLOB_DISTANCE) {
+				//ok. it passed that test.
+				if (isLeftSwipe(pastCursors)) {
+					success = true;
+					System.out.println("Left Swipe!!!");
+					//call whatever
+				} else if (isUpSwipe(pastCursors)) {
+					success = true;
+					System.out.println("Up Swipe!!!");
+					//call whatever
+				}
+			}
+				
+			
+			
+			
+			
+			if (success) {
+				pastCursors.clear();
+			}
 		}
 		
 		
@@ -56,6 +85,55 @@ public class SwipeGestures implements TuioListener {
 		
 	}
 	
+	boolean isLeftSwipe(ArrayList<TuioCursor> cursors) {
+		if (allPointsWithinRect(cursors, findMaxIndex(cursors), 0, HORIZ_MIN_X, 0, 1))
+			return true;
+		return false;
+	}
+	
+	boolean isUpSwipe(ArrayList<TuioCursor> cursors) {
+		if (allPointsWithinRect(cursors, findMaxIndex(cursors), 0, 1, 0, VERT_MIN_Y))
+			return true;
+		return false;
+	}
+
+	
+	
+	int findMaxIndex(ArrayList<TuioCursor> cursors) {
+		int maxIndex = 0;
+		for (TuioCursor cursor : cursors) {
+			int len = cursor.getPath().size();
+			if (len > maxIndex) 
+				maxIndex = len;
+		}
+		
+		return maxIndex;
+	}
+	boolean allPointsWithinRect(ArrayList<TuioCursor> cursors, int index, float left, float right, float top, float bottom) {
+		for (TuioCursor cursor : cursors) {
+			TuioPoint p;
+			if (index > cursor.getPath().size())
+				p = cursor.getPath().lastElement();
+			else
+				p = cursor.getPath().get(index);
+			
+			if (p.getX() < left || p.getX() > right || p.getY() < top || p.getY() > bottom) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	float lastMinCircle(ArrayList<TuioCursor> cursors) {
+		int maxIndex = 0;
+		for (TuioCursor cursor : cursors) {
+			int len = cursor.getPath().size();
+			if (len > maxIndex) 
+				maxIndex = len;
+		}
+		
+		return minCircle(cursors, maxIndex);
+	}
 	
 	float minCircle(ArrayList<TuioCursor> cursors, int index) {
 		float totalMinimum = 100f;
@@ -71,7 +149,11 @@ public class SwipeGestures implements TuioListener {
 		TuioPoint pivotPoint = targetCursor.getPath().get(index);
 		float maxDistance = 0;
 		for (TuioCursor cursor : cursors) {
-			TuioPoint point = cursor.getPath().get(index);
+			TuioPoint point;
+			if (cursor.getPath().size() < index)
+				point = cursor.getPath().lastElement();
+			else
+				point = cursor.getPath().get(index);
 			float distance = point.getDistance(pivotPoint);
 			if (distance > maxDistance) {
 				maxDistance = distance;
