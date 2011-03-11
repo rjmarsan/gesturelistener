@@ -13,9 +13,9 @@ public class SwipeGestures implements TuioListener {
 	int MAX_CURSORS = 5;
 	float MIN_BLOB_DISTANCE = 0.1f;
 	float MAX_BLOB_DISTANCE = 0.3f;
-	float HORIZ_MIN_X = 0.3f;
+	float HORIZ_MIN_X = 0.2f;
 	float HORIZ_MAX_Y = 0.1f;
-	float VERT_MIN_Y = 0.3f;
+	float VERT_MIN_Y = 0.2f;
 	float VERT_MAX_X = 0.1f;
 	
 	ArrayList<TuioCursor> pastCursors = new ArrayList<TuioCursor>();
@@ -26,7 +26,7 @@ public class SwipeGestures implements TuioListener {
 
 	@Override
 	public void addTuioCursor(TuioCursor tcur) {
-//		System.out.println("cursor added! "+tcur);
+		System.out.println("cursor added! "+tcur);
 	}
 
 	@Override
@@ -52,6 +52,7 @@ public class SwipeGestures implements TuioListener {
 
 
 		if (pastCursors.size() >= MAX_CURSORS) {
+			System.out.println("Detecting!");
 			boolean success = false;
 			
 			float startBlobSize = minCircle(pastCursors, 0);
@@ -59,6 +60,7 @@ public class SwipeGestures implements TuioListener {
 			
 			if (startBlobSize > MIN_BLOB_DISTANCE && startBlobSize < MAX_BLOB_DISTANCE
 					&& endBlobSize > MIN_BLOB_DISTANCE && endBlobSize < MAX_BLOB_DISTANCE) {
+				System.out.println("passed blob size test!");
 				//ok. it passed that test.
 				if (isLeftSwipe(pastCursors)) {
 					success = true;
@@ -85,14 +87,53 @@ public class SwipeGestures implements TuioListener {
 		
 	}
 	
+	TuioPoint getAveragePoint(ArrayList<TuioCursor> cursors, int index) {
+		float x = 0;
+		float y = 0;
+		
+		
+		for (TuioCursor cursor : cursors) {
+			TuioPoint point;
+			if (index >= cursor.getPath().size())
+				point = cursor.getPath().lastElement();
+			else
+				point = cursor.getPath().get(index);
+			x += point.getX();
+			y += point.getY();
+		}
+		x = x/cursors.size();
+		y = y/cursors.size();
+		
+		return new TuioPoint(x,y);
+	}
+	
 	boolean isLeftSwipe(ArrayList<TuioCursor> cursors) {
-		if (allPointsWithinRect(cursors, findMaxIndex(cursors), 0, HORIZ_MIN_X, 0, 1))
+//		TuioPoint startPoint = getAveragePoint(cursors,0);
+//		System.out.println("Start point: "+startPoint.getX());
+//		if (allPointsWithinRect(cursors, findMaxIndex(cursors), 0, startPoint.getX()-HORIZ_MIN_X, 0, 1))
+//			return true;
+		TuioPoint startPoint = getAveragePoint(cursors,0);
+		System.out.println("Start pointX: "+startPoint.getX());
+		TuioPoint lastPoint = getAveragePoint(cursors,findMaxIndex(cursors));
+		System.out.println("end pointX: "+lastPoint.getX());
+
+//		if (allPointsWithinRect(cursors, findMaxIndex(cursors), 0, 1, 0, startPoint.getY()-VERT_MIN_Y))
+//			return true;
+		if (startPoint.getX() - HORIZ_MIN_X > lastPoint.getX())
 			return true;
+
 		return false;
 	}
 	
 	boolean isUpSwipe(ArrayList<TuioCursor> cursors) {
-		if (allPointsWithinRect(cursors, findMaxIndex(cursors), 0, 1, 0, VERT_MIN_Y))
+		TuioPoint startPoint = getAveragePoint(cursors,0);
+		System.out.println("Start pointY: "+startPoint.getY());
+		TuioPoint lastPoint = getAveragePoint(cursors,findMaxIndex(cursors));
+		System.out.println("end pointY: "+lastPoint.getY());
+
+//		if (allPointsWithinRect(cursors, findMaxIndex(cursors), 0, 1, 0, startPoint.getY()-VERT_MIN_Y))
+//			return true;
+		if (startPoint.getY() - VERT_MIN_Y > lastPoint.getY())
 			return true;
 		return false;
 	}
@@ -112,7 +153,7 @@ public class SwipeGestures implements TuioListener {
 	boolean allPointsWithinRect(ArrayList<TuioCursor> cursors, int index, float left, float right, float top, float bottom) {
 		for (TuioCursor cursor : cursors) {
 			TuioPoint p;
-			if (index > cursor.getPath().size())
+			if (index >= cursor.getPath().size())
 				p = cursor.getPath().lastElement();
 			else
 				p = cursor.getPath().get(index);
@@ -146,11 +187,15 @@ public class SwipeGestures implements TuioListener {
 	}
 	
 	float maxDistance(ArrayList<TuioCursor> cursors, int index, TuioCursor targetCursor) {
-		TuioPoint pivotPoint = targetCursor.getPath().get(index);
+		TuioPoint pivotPoint;
+		if (index >= targetCursor.getPath().size())
+			pivotPoint = targetCursor.getPath().lastElement();
+		else
+			pivotPoint = targetCursor.getPath().get(index);
 		float maxDistance = 0;
 		for (TuioCursor cursor : cursors) {
 			TuioPoint point;
-			if (cursor.getPath().size() < index)
+			if (index >= cursor.getPath().size())
 				point = cursor.getPath().lastElement();
 			else
 				point = cursor.getPath().get(index);
